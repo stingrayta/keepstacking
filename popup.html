@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>KeepStacking</title>
+  <link rel="stylesheet" href="popup.css" />
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <div class="logo">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <rect x="3"  y="17" width="18" height="4" rx="2" fill="#f59e0b"/>
+          <rect x="5"  y="11" width="14" height="4" rx="2" fill="#fbbf24"/>
+          <rect x="7"  y="5"  width="10" height="4" rx="2" fill="#fde68a"/>
+        </svg>
+        <span class="title">KeepStacking</span>
+      </div>
+    </div>
+
+    <!-- Wrong tab notice -->
+    <div id="wrong-tab" class="section hidden">
+      <div class="notice">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+          <circle cx="12" cy="12" r="10" stroke="#f59e0b" stroke-width="2"/>
+          <path d="M12 8v4M12 16h.01" stroke="#f59e0b" stroke-width="2" stroke-linecap="round"/>
+        </svg>
+        <span>Open your prop firm dashboard first</span>
+      </div>
+      <a id="open-dashboard" href="#" class="btn btn-secondary">Open Dashboard</a>
+    </div>
+
+    <!-- Main content -->
+    <div id="main-content" class="section hidden">
+
+      <!-- Spent / Received side by side -->
+      <div class="metrics-row">
+        <div class="metric-card">
+          <div class="metric-label">Spent</div>
+          <div id="spent-display" class="metric-amount spent">—</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-label">Received</div>
+          <div id="received-display" class="metric-amount received">—</div>
+        </div>
+      </div>
+
+      <!-- Net profit -->
+      <div class="net-card">
+        <div class="net-label">Net Profit</div>
+        <div id="net-display" class="net-amount">—</div>
+        <div id="last-calculated" class="last-calculated"></div>
+      </div>
+
+      <!-- Status / progress -->
+      <div id="status-row" class="status-row hidden">
+        <div class="spinner"></div>
+        <span id="status-text">Calculating...</span>
+      </div>
+
+      <!-- Action button -->
+      <button id="calc-btn" class="btn btn-primary">Calculate</button>
+
+      <!-- Combined monthly breakdown -->
+      <div id="breakdown-section" class="breakdown hidden">
+        <div class="breakdown-header">
+          <span>By Month</span>
+          <button id="toggle-breakdown" class="toggle-btn">Show</button>
+        </div>
+        <div class="breakdown-col-header">
+          <span></span>
+          <span>Spent</span>
+          <span>Received</span>
+          <span>Net</span>
+        </div>
+        <div id="breakdown-list" class="breakdown-list hidden"></div>
+      </div>
+
+      <!-- Reset -->
+      <button id="reset-btn" class="btn btn-ghost" title="Clear cached data">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="3 6 5 6 21 6"/>
+          <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
+          <path d="M10 11v6M14 11v6"/>
+          <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
+        </svg>
+      </button>
+    </div>
+  </div>
+
+  <script type="module" src="popup.js"></script>
+</body>
+</html>
