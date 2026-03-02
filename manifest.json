@@ -10,7 +10,8 @@
     "https://myfundedfutures.com/*",
     "https://api.myfundedfutures.com/*",
     "https://app.alpha-futures.com/*",
-    "https://backend.alpha-futures.com/*"
+    "https://backend.alpha-futures.com/*",
+    "https://takeprofittrader.com/*"
   ],
   "action": {
     "default_popup": "popup.html",

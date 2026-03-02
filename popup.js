@@ -4,8 +4,9 @@ import * as apex  from "./firms/apex.js";
 import * as alphaFutures from "./firms/alpha-futures.js";
 import * as lucid from "./firms/lucid.js";
 import * as mff   from "./firms/mff.js";
+import * as tpt   from "./firms/tpt.js";
 
-const FIRMS = [apex, alphaFutures, lucid, mff];
+const FIRMS = [apex, alphaFutures, lucid, mff, tpt];
 
 // ── DOM refs ────────────────────────────────────────────────────────────────
 const wrongTab         = document.getElementById("wrong-tab");
