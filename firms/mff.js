@@ -4,7 +4,7 @@
 
 export const id     = "mff";
 export const name   = "MyFundedFutures";
-export const origin = "https://myfundedfutures.com";
+export const origin = "https://myfundedfutures.com/stats";
 
 export async function scrape(cachedSpendingKeys, cachedPayoutKeys) {
   const API_URL = "https://api.myfundedfutures.com/api/getReceipts/";
