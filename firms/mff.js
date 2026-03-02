@@ -1,6 +1,6 @@
 // MyFundedFutures — scraper
 // Spending: POST /api/getReceipts/ with date range, cookie auth
-// Payouts:  not yet implemented
+// Payouts:  GET /api/getPastPayouts/ with pagination, same cookie auth
 
 export const id     = "mff";
 export const name   = "MyFundedFutures";
@@ -58,12 +58,46 @@ export async function scrape(cachedSpendingKeys, cachedPayoutKeys) {
     months[monthKey] = (months[monthKey] || 0) + amount;
   });
 
+  // ── Payouts: getPastPayouts with pagination ──────────────────────────────
+  const payoutMonths = {};
+  const PAYOUT_PAGE_SIZE = 100;
+  let payoutPage = 0;
+  let payoutPagesFetched = 0;
+
+  try {
+    while (true) {
+      const payoutUrl = `https://api.myfundedfutures.com/api/getPastPayouts/?page=${payoutPage}&page_size=${PAYOUT_PAGE_SIZE}`;
+      const res = await fetch(payoutUrl, { credentials: "include" });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      const ok = data.ok;
+      if (!ok || !ok.data) throw new Error("Unexpected payout response format.");
+      const pastPayouts = ok.data.past_payouts;
+      if (!Array.isArray(pastPayouts)) break;
+
+      payoutPagesFetched++;
+
+      pastPayouts.forEach((p) => {
+        if (p.status !== "Processed") return;
+        const amount = parseFloat(p.amount) || 0;
+        const monthKey = parseMonthKey(p.date);
+        if (!monthKey || amount === 0) return;
+        payoutMonths[monthKey] = (payoutMonths[monthKey] || 0) + amount;
+      });
+
+      if (pastPayouts.length < PAYOUT_PAGE_SIZE || ok.next_page == null) break;
+      payoutPage++;
+    }
+  } catch (err) {
+    console.warn("[KeepStacking] MFF payout fetch failed:", err.message);
+  }
+
   return {
     spendingMonths:       months,
-    payoutMonths:         {},   // TODO: add payout endpoint when available
+    payoutMonths:         payoutMonths,
     spendingPagesFetched: 1,
-    payoutPagesFetched:   0,
+    payoutPagesFetched:   payoutPagesFetched,
     spendingTotalPages:   1,
-    payoutTotalPages:     0,
+    payoutTotalPages:     payoutPagesFetched,
   };
 }
