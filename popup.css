@@ -219,6 +219,74 @@ body {
   font-size: 13px;
 }
 
+/* ── Wrong-tab: dashboard links ── */
+.dashboard-links {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.dashboard-link {
+  width: 100%;
+}
+
+/* ── Wrong-tab: cache totals ── */
+.wrong-tab-totals {
+  background: #111318;
+  border: 1px solid #1e2433;
+  border-radius: 8px;
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.wrong-tab-totals-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 13px;
+}
+
+.wrong-tab-totals-row .metric-label {
+  margin-bottom: 0;
+}
+
+/* ── Wrong-tab: by-prop section ── */
+.by-prop-row {
+  border-top: 1px solid #1e2433;
+}
+
+.by-prop-row:first-child {
+  border-top: none;
+}
+
+.by-prop-summary-row {
+  border-top: 1px solid #1e2433;
+}
+
+.by-prop-months-toggle {
+  margin-left: 12px;
+  margin-bottom: 4px;
+  font-size: 12px;
+}
+
+.by-prop-months {
+  padding-left: 12px;
+  border-left: 2px solid #1e2433;
+  margin-left: 12px;
+  margin-bottom: 8px;
+}
+
+.breakdown-row-nested {
+  padding: 5px 12px 5px 8px;
+  font-size: 12px;
+}
+
+.breakdown-row-nested .breakdown-month {
+  font-size: 12px;
+}
+
 /* ── Breakdown ── */
 .breakdown {
   border: 1px solid #1e2433;

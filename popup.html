@@ -28,7 +28,21 @@
         </svg>
         <span>Open your prop firm dashboard first</span>
       </div>
-      <a id="open-dashboard" href="#" class="btn btn-secondary">Open Dashboard</a>
+      <div id="dashboard-links" class="dashboard-links"></div>
+      <div id="wrong-tab-totals" class="wrong-tab-totals hidden"></div>
+      <div id="by-prop-section" class="breakdown hidden">
+        <div class="breakdown-header">
+          <span>By prop</span>
+          <button id="toggle-by-prop" class="toggle-btn">Show</button>
+        </div>
+        <div class="breakdown-col-header">
+          <span></span>
+          <span>Spent</span>
+          <span>Received</span>
+          <span>Net</span>
+        </div>
+        <div id="by-prop-list" class="breakdown-list hidden"></div>
+      </div>
     </div>
 
     <!-- Main content -->
