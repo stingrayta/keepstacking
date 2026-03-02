@@ -2,11 +2,12 @@
 // Add new firms here — import and include in FIRMS. Nothing else changes.
 import * as apex  from "./firms/apex.js";
 import * as alphaFutures from "./firms/alpha-futures.js";
+import * as bulenox from "./firms/bulenox.js";
 import * as lucid from "./firms/lucid.js";
 import * as mff   from "./firms/mff.js";
 import * as tpt   from "./firms/tpt.js";
 
-const FIRMS = [apex, alphaFutures, lucid, mff, tpt];
+const FIRMS = [apex, alphaFutures, bulenox, lucid, mff, tpt];
 
 // ── DOM refs ────────────────────────────────────────────────────────────────
 const wrongTab         = document.getElementById("wrong-tab");

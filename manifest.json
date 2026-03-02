@@ -5,6 +5,7 @@
   "description": "Track your total spending on prop trading platforms, with smart monthly caching.",
   "permissions": ["scripting", "activeTab", "storage"],
   "host_permissions": [
+    "https://bulenox.com/*",
     "https://dashboard.apextraderfunding.com/*",
     "https://dash.lucidtrading.com/*",
     "https://myfundedfutures.com/*",
