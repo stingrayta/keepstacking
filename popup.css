@@ -223,11 +223,13 @@ body {
 .dashboard-links {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 4px;
 }
 
 .dashboard-link {
   width: 100%;
+  padding: 6px 12px;
+  font-size: 13px;
 }
 
 /* ── Wrong-tab: cache totals ── */
