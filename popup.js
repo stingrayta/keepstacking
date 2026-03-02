@@ -1,10 +1,11 @@
 // ── Firm registry ────────────────────────────────────────────────────────────
 // Add new firms here — import and include in FIRMS. Nothing else changes.
 import * as apex  from "./firms/apex.js";
+import * as alphaFutures from "./firms/alpha-futures.js";
 import * as lucid from "./firms/lucid.js";
 import * as mff   from "./firms/mff.js";
 
-const FIRMS = [apex, lucid, mff];
+const FIRMS = [apex, alphaFutures, lucid, mff];
 
 // ── DOM refs ────────────────────────────────────────────────────────────────
 const wrongTab         = document.getElementById("wrong-tab");
@@ -177,14 +178,26 @@ async function init() {
 
       // firm.scrape is a self-contained function — Chrome serializes it
       // automatically. Each firm file owns its own scraping logic entirely.
-      const results = await chrome.scripting.executeScript({
-        target: { tabId: tab.id },
-        func:   firm.scrape,
-        args:   [cachedSpendingKeys, cachedPayoutKeys],
-      });
+      let results;
+      try {
+        results = await chrome.scripting.executeScript({
+          target: { tabId: tab.id },
+          func:   firm.scrape,
+          args:   [cachedSpendingKeys, cachedPayoutKeys],
+        });
+      } catch (scriptErr) {
+        const msg = scriptErr?.message || String(scriptErr);
+        throw new Error(msg || "Script failed. Open DevTools on the dashboard tab (F12) and try again.");
+      }
 
       if (!results || results.length === 0) throw new Error("No result from scraper.");
-      const scraperResult = results[0].result;
+      const entry = results[0];
+      if (entry.exceptionDetails) {
+        const exc = entry.exceptionDetails.exception;
+        const msg = exc?.description ?? exc?.value ?? entry.exceptionDetails.text ?? JSON.stringify(entry.exceptionDetails);
+        throw new Error(msg);
+      }
+      const scraperResult = entry.result;
       if (!scraperResult || typeof scraperResult !== "object") throw new Error("Unexpected scraper result.");
 
       const {
@@ -221,8 +234,8 @@ async function init() {
       renderTotal(mergedSpending, mergedPayouts, now);
       setTimeout(clearStatus, 3000);
     } catch (err) {
-      setStatus(`Error: ${err.message}`);
-      console.error("[KeepStacking]", err);
+      const msg = err?.message || String(err);
+      setStatus(`Error: ${msg}`);
     } finally {
       setCalculating(false);
     }

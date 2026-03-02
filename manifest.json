@@ -3,16 +3,14 @@
   "name": "KeepStacking",
   "version": "1.0.0",
   "description": "Track your total spending on prop trading platforms, with smart monthly caching.",
-  "permissions": [
-    "scripting",
-    "activeTab",
-    "storage"
-  ],
+  "permissions": ["scripting", "activeTab", "storage"],
   "host_permissions": [
     "https://dashboard.apextraderfunding.com/*",
     "https://dash.lucidtrading.com/*",
     "https://myfundedfutures.com/*",
-    "https://api.myfundedfutures.com/*"
+    "https://api.myfundedfutures.com/*",
+    "https://app.alpha-futures.com/*",
+    "https://backend.alpha-futures.com/*"
   ],
   "action": {
     "default_popup": "popup.html",

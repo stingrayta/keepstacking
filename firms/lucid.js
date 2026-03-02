@@ -1,6 +1,6 @@
 // Lucid Trading — scraper
-// Spending: REST API with Bearer token from localStorage
-// Payouts:  not yet implemented — returns empty
+// Spending: REST API order-history with Bearer token from localStorage
+// Payouts:  REST API payout-history, same auth
 
 export const id     = "lucid";
 export const name   = "Lucid Trading";
@@ -99,12 +99,44 @@ export async function scrape(cachedSpendingKeys, cachedPayoutKeys) {
     offset += LIMIT;
   }
 
+  // ── Payout history ────────────────────────────────────────────────────────
+  const payoutMonths = {};
+  let payoutPagesFetched = 0;
+  let payoutTotalPages = 0;
+
+  try {
+    const payoutUrl = `https://dash.lucidtrading.com/api/payout/payout-history` +
+                     `?userKey=${encodeURIComponent(userKey)}`;
+    const res = await fetch(payoutUrl, {
+      credentials: "same-origin",
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const payouts = await res.json();
+    if (!Array.isArray(payouts)) throw new Error("Unexpected payout response format.");
+
+    payoutTotalPages = 1;
+    payoutPagesFetched = 1;
+
+    payouts.forEach((p) => {
+      if (p.status !== "Paid") return;
+      const amount = parseFloat(p.amount) || 0;
+      const dateStr = p.payDate || p.approvalDate || p.requestDate;
+      const monthKey = parseMonthKey(dateStr);
+      if (!monthKey || amount === 0) return;
+      payoutMonths[monthKey] = (payoutMonths[monthKey] || 0) + amount;
+    });
+  } catch (err) {
+    // Non-fatal: spending still returns; payouts remain empty
+    console.warn("[KeepStacking] Lucid payout fetch failed:", err.message);
+  }
+
   return {
     spendingMonths:       months,
-    payoutMonths:         {},
+    payoutMonths:         payoutMonths,
     spendingPagesFetched: pagesFetched,
-    payoutPagesFetched:   0,
+    payoutPagesFetched:   payoutPagesFetched,
     spendingTotalPages:   totalPages,
-    payoutTotalPages:     0,
+    payoutTotalPages:     payoutTotalPages,
   };
 }
