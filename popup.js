@@ -2,15 +2,21 @@
 // Add new firms here — import and include in FIRMS. Nothing else changes.
 import * as apex  from "./firms/apex.js";
 import * as alphaFutures from "./firms/alpha-futures.js";
+import * as bulenox from "./firms/bulenox.js";
 import * as lucid from "./firms/lucid.js";
 import * as mff   from "./firms/mff.js";
+import * as tpt   from "./firms/tpt.js";
 
-const FIRMS = [apex, alphaFutures, lucid, mff];
+const FIRMS = [apex, alphaFutures, bulenox, lucid, mff, tpt];
 
 // ── DOM refs ────────────────────────────────────────────────────────────────
 const wrongTab         = document.getElementById("wrong-tab");
 const mainContent      = document.getElementById("main-content");
-const openDashboard    = document.getElementById("open-dashboard");
+const dashboardLinks   = document.getElementById("dashboard-links");
+const wrongTabTotals   = document.getElementById("wrong-tab-totals");
+const byPropSection    = document.getElementById("by-prop-section");
+const toggleByProp     = document.getElementById("toggle-by-prop");
+const byPropList       = document.getElementById("by-prop-list");
 const spentDisplay     = document.getElementById("spent-display");
 const receivedDisplay  = document.getElementById("received-display");
 const netDisplay       = document.getElementById("net-display");
@@ -148,12 +154,99 @@ async function init() {
 
   if (!firm) {
     wrongTab.classList.remove("hidden");
-    openDashboard.addEventListener("click", (e) => {
-      e.preventDefault();
-      // Open the first registered firm's dashboard as a fallback
-      chrome.tabs.create({ url: FIRMS[0].origin + "/member" });
-      window.close();
+    // Load cache for all firms to show totals and by-prop breakdown
+    const caches = await Promise.all(FIRMS.map(f => loadCache(f.id)));
+    const firmsWithCache = FIRMS.map((f, i) => ({ firm: f, cache: caches[i] })).filter(
+      ({ cache }) => Object.keys(cache.spendingMonths).length > 0 || Object.keys(cache.payoutMonths).length > 0
+    );
+
+    // Company links (one per firm)
+    dashboardLinks.innerHTML = FIRMS.map(f => `<a href="${f.origin}" class="btn btn-secondary dashboard-link" data-origin="${f.origin}">${f.name}</a>`).join("");
+    dashboardLinks.querySelectorAll(".dashboard-link").forEach(a => {
+      a.addEventListener("click", (e) => {
+        e.preventDefault();
+        chrome.tabs.create({ url: a.dataset.origin });
+        window.close();
+      });
     });
+
+    // Aggregate total payout/spend from cache
+    const totalSpent = caches.reduce((s, c) => s + Object.values(c.spendingMonths).reduce((t, v) => t + v, 0), 0);
+    const totalReceived = caches.reduce((s, c) => s + Object.values(c.payoutMonths).reduce((t, v) => t + v, 0), 0);
+    const hasAnyCache = totalSpent > 0 || totalReceived > 0;
+    if (hasAnyCache) {
+      wrongTabTotals.classList.remove("hidden");
+      const net = totalReceived - totalSpent;
+      wrongTabTotals.innerHTML = `
+        <div class="wrong-tab-totals-row">
+          <span class="metric-label">Spent</span>
+          <span class="metric-amount spent">${formatUSD(totalSpent)}</span>
+        </div>
+        <div class="wrong-tab-totals-row">
+          <span class="metric-label">Received</span>
+          <span class="metric-amount received">${formatUSD(totalReceived)}</span>
+        </div>
+        <div class="wrong-tab-totals-row">
+          <span class="metric-label">Net</span>
+          <span class="metric-amount ${net >= 0 ? "positive" : "negative"}">${formatUSD(net)}</span>
+        </div>
+      `;
+    } else {
+      wrongTabTotals.classList.add("hidden");
+    }
+
+    // By-prop collapsed section
+    if (firmsWithCache.length > 0) {
+      byPropSection.classList.remove("hidden");
+      byPropList.innerHTML = firmsWithCache.map(({ firm: f, cache }) => {
+        const spent = Object.values(cache.spendingMonths).reduce((s, v) => s + v, 0);
+        const received = Object.values(cache.payoutMonths).reduce((s, v) => s + v, 0);
+        const net = received - spent;
+        const netClass = net >= 0 ? "positive" : "negative";
+        const allKeys = [...new Set([...Object.keys(cache.spendingMonths), ...Object.keys(cache.payoutMonths)])].sort((a, b) => b.localeCompare(a));
+        const monthlyRows = allKeys.map(k => {
+          const s = cache.spendingMonths[k] || 0;
+          const r = cache.payoutMonths[k] || 0;
+          const n = r - s;
+          return `<div class="breakdown-row breakdown-row-nested">
+            <span class="breakdown-month">${formatMonthKey(k)}</span>
+            <span class="breakdown-amount spent">${formatUSD(s)}</span>
+            <span class="breakdown-amount received">${formatUSD(r)}</span>
+            <span class="breakdown-amount ${n >= 0 ? "positive" : "negative"}">${formatUSD(n)}</span>
+          </div>`;
+        }).join("");
+        return `<div class="by-prop-row" data-firm-id="${f.id}">
+          <div class="breakdown-row by-prop-summary-row">
+            <span class="breakdown-month">${f.name}</span>
+            <span class="breakdown-amount spent">${formatUSD(spent)}</span>
+            <span class="breakdown-amount received">${formatUSD(received)}</span>
+            <span class="breakdown-amount ${netClass}">${formatUSD(net)}</span>
+          </div>
+          <button type="button" class="toggle-btn by-prop-months-toggle">Show months</button>
+          <div class="by-prop-months hidden">${monthlyRows}</div>
+        </div>`;
+      }).join("");
+
+      // Toggle "By prop" list visibility
+      toggleByProp.addEventListener("click", () => {
+        const isHidden = byPropList.classList.contains("hidden");
+        byPropList.classList.toggle("hidden", !isHidden);
+        toggleByProp.textContent = isHidden ? "Hide" : "Show";
+      });
+
+      // Per-prop "Show months" toggle
+      byPropList.querySelectorAll(".by-prop-months-toggle").forEach(btn => {
+        btn.addEventListener("click", () => {
+          const row = btn.closest(".by-prop-row");
+          const monthsEl = row.querySelector(".by-prop-months");
+          const isHidden = monthsEl.classList.contains("hidden");
+          monthsEl.classList.toggle("hidden", !isHidden);
+          btn.textContent = isHidden ? "Hide months" : "Show months";
+        });
+      });
+    } else {
+      byPropSection.classList.add("hidden");
+    }
     return;
   }
 
