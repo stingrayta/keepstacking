@@ -29,6 +29,8 @@ const toggleBreakdown  = document.getElementById("toggle-breakdown");
 const breakdownList    = document.getElementById("breakdown-list");
 const resetBtn         = document.getElementById("reset-btn");
 
+const MAIN_DASH_VIEW_KEY = "mainDashViewMode";
+
 // ── Helpers ─────────────────────────────────────────────────────────────────
 
 function formatUSD(amount) {
@@ -70,6 +72,89 @@ function setCalculating(on) {
   calcBtn.textContent = on ? "Calculating…" : "Recalculate";
   if (on) setStatus("Starting…");
   else clearStatus();
+}
+
+function buildMonthlyAggregate(firmsWithCache) {
+  const allMonthKeys = [...new Set(
+    firmsWithCache.flatMap(({ cache }) => [
+      ...Object.keys(cache.spendingMonths),
+      ...Object.keys(cache.payoutMonths),
+    ])
+  )].sort((a, b) => b.localeCompare(a));
+  const monthlyData = {};
+  for (const key of allMonthKeys) {
+    let spent = 0, received = 0;
+    const firms = [];
+    for (const { firm: f, cache } of firmsWithCache) {
+      const s = cache.spendingMonths[key] || 0;
+      const r = cache.payoutMonths[key] || 0;
+      if (s !== 0 || r !== 0) {
+        spent += s;
+        received += r;
+        firms.push({ name: f.name, spent: s, received: r });
+      }
+    }
+    monthlyData[key] = { spent, received, firms };
+  }
+  return { allMonthKeys, monthlyData };
+}
+
+function renderMainDashByProp(firmsWithCache) {
+  byPropList.innerHTML = firmsWithCache.map(({ firm: f, cache }) => {
+    const spent = Object.values(cache.spendingMonths).reduce((s, v) => s + v, 0);
+    const received = Object.values(cache.payoutMonths).reduce((s, v) => s + v, 0);
+    const net = received - spent;
+    const netClass = net >= 0 ? "positive" : "negative";
+    const allKeys = [...new Set([...Object.keys(cache.spendingMonths), ...Object.keys(cache.payoutMonths)])].sort((a, b) => b.localeCompare(a));
+    const monthlyRows = allKeys.map(k => {
+      const s = cache.spendingMonths[k] || 0;
+      const r = cache.payoutMonths[k] || 0;
+      const n = r - s;
+      return `<div class="breakdown-row breakdown-row-nested">
+        <span class="breakdown-month">${formatMonthKey(k)}</span>
+        <span class="breakdown-amount spent">${formatUSD(s)}</span>
+        <span class="breakdown-amount received">${formatUSD(r)}</span>
+        <span class="breakdown-amount ${n >= 0 ? "positive" : "negative"}">${formatUSD(n)}</span>
+      </div>`;
+    }).join("");
+    return `<div class="by-prop-row" data-firm-id="${f.id}">
+      <div class="breakdown-row by-prop-summary-row">
+        <span class="breakdown-month">${f.name}</span>
+        <span class="breakdown-amount spent">${formatUSD(spent)}</span>
+        <span class="breakdown-amount received">${formatUSD(received)}</span>
+        <span class="breakdown-amount ${netClass}">${formatUSD(net)}</span>
+      </div>
+      <button type="button" class="toggle-btn by-prop-months-toggle">Show months</button>
+      <div class="by-prop-months hidden">${monthlyRows}</div>
+    </div>`;
+  }).join("");
+}
+
+function renderMainDashByMonth(allMonthKeys, monthlyData) {
+  byPropList.innerHTML = allMonthKeys.map(monthKey => {
+    const { spent, received, firms } = monthlyData[monthKey];
+    const net = received - spent;
+    const netClass = net >= 0 ? "positive" : "negative";
+    const firmRows = firms.map(({ name, spent: s, received: r }) => {
+      const n = r - s;
+      return `<div class="breakdown-row breakdown-row-nested">
+        <span class="breakdown-month">${name}</span>
+        <span class="breakdown-amount spent">${formatUSD(s)}</span>
+        <span class="breakdown-amount received">${formatUSD(r)}</span>
+        <span class="breakdown-amount ${n >= 0 ? "positive" : "negative"}">${formatUSD(n)}</span>
+      </div>`;
+    }).join("");
+    return `<div class="by-month-row" data-month-key="${monthKey}">
+      <div class="breakdown-row by-month-summary-row">
+        <span class="breakdown-month">${formatMonthKey(monthKey)}</span>
+        <span class="breakdown-amount spent">${formatUSD(spent)}</span>
+        <span class="breakdown-amount received">${formatUSD(received)}</span>
+        <span class="breakdown-amount ${netClass}">${formatUSD(net)}</span>
+      </div>
+      <button type="button" class="toggle-btn by-month-firms-toggle">Show firms</button>
+      <div class="by-month-firms hidden">${firmRows}</div>
+    </div>`;
+  }).join("");
 }
 
 // ── Render ───────────────────────────────────────────────────────────────────
@@ -146,9 +231,16 @@ function saveCache(firmId, spendingMonths, payoutMonths, lastCalculated) {
   });
 }
 
+function clearCacheForFirm(firmId) {
+  const k = cacheKeys(firmId);
+  return new Promise((resolve) => {
+    chrome.storage.local.remove([k.spending, k.payouts, k.lastCalc], resolve);
+  });
+}
+
 // ── Main ─────────────────────────────────────────────────────────────────────
 
-async function init() {
+async function init(opts = {}) {
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
   const firm  = FIRMS.find(f => tab?.url?.startsWith(f.origin));
 
@@ -195,57 +287,80 @@ async function init() {
       wrongTabTotals.classList.add("hidden");
     }
 
-    // By-prop collapsed section
+    // By-prop / By-month section
     if (firmsWithCache.length > 0) {
       byPropSection.classList.remove("hidden");
-      byPropList.innerHTML = firmsWithCache.map(({ firm: f, cache }) => {
-        const spent = Object.values(cache.spendingMonths).reduce((s, v) => s + v, 0);
-        const received = Object.values(cache.payoutMonths).reduce((s, v) => s + v, 0);
-        const net = received - spent;
-        const netClass = net >= 0 ? "positive" : "negative";
-        const allKeys = [...new Set([...Object.keys(cache.spendingMonths), ...Object.keys(cache.payoutMonths)])].sort((a, b) => b.localeCompare(a));
-        const monthlyRows = allKeys.map(k => {
-          const s = cache.spendingMonths[k] || 0;
-          const r = cache.payoutMonths[k] || 0;
-          const n = r - s;
-          return `<div class="breakdown-row breakdown-row-nested">
-            <span class="breakdown-month">${formatMonthKey(k)}</span>
-            <span class="breakdown-amount spent">${formatUSD(s)}</span>
-            <span class="breakdown-amount received">${formatUSD(r)}</span>
-            <span class="breakdown-amount ${n >= 0 ? "positive" : "negative"}">${formatUSD(n)}</span>
-          </div>`;
-        }).join("");
-        return `<div class="by-prop-row" data-firm-id="${f.id}">
-          <div class="breakdown-row by-prop-summary-row">
-            <span class="breakdown-month">${f.name}</span>
-            <span class="breakdown-amount spent">${formatUSD(spent)}</span>
-            <span class="breakdown-amount received">${formatUSD(received)}</span>
-            <span class="breakdown-amount ${netClass}">${formatUSD(net)}</span>
-          </div>
-          <button type="button" class="toggle-btn by-prop-months-toggle">Show months</button>
-          <div class="by-prop-months hidden">${monthlyRows}</div>
-        </div>`;
-      }).join("");
 
-      // Toggle "By prop" list visibility
+      const viewModeBtns = byPropSection.querySelectorAll(".view-mode-btn");
+      const loadViewMode = () => new Promise((resolve) => {
+        chrome.storage.local.get([MAIN_DASH_VIEW_KEY], (data) => {
+          resolve(data[MAIN_DASH_VIEW_KEY] || "byProp");
+        });
+      });
+      const saveViewMode = (mode) => {
+        chrome.storage.local.set({ [MAIN_DASH_VIEW_KEY]: mode });
+      };
+
+      const { allMonthKeys, monthlyData } = buildMonthlyAggregate(firmsWithCache);
+
+      const renderMainDashBreakdown = (mode) => {
+        if (mode === "byProp") {
+          renderMainDashByProp(firmsWithCache);
+        } else {
+          renderMainDashByMonth(allMonthKeys, monthlyData);
+        }
+        viewModeBtns.forEach((btn) => {
+          btn.classList.toggle("active", btn.dataset.mode === mode);
+        });
+      };
+
+      loadViewMode().then((initialMode) => {
+        renderMainDashBreakdown(initialMode);
+      });
+
+      viewModeBtns.forEach((btn) => {
+        btn.addEventListener("click", () => {
+          const mode = btn.dataset.mode;
+          saveViewMode(mode);
+          renderMainDashBreakdown(mode);
+        });
+      });
+
       toggleByProp.addEventListener("click", () => {
         const isHidden = byPropList.classList.contains("hidden");
         byPropList.classList.toggle("hidden", !isHidden);
         toggleByProp.textContent = isHidden ? "Hide" : "Show";
       });
 
-      // Per-prop "Show months" toggle
-      byPropList.querySelectorAll(".by-prop-months-toggle").forEach(btn => {
-        btn.addEventListener("click", () => {
-          const row = btn.closest(".by-prop-row");
+      byPropList.addEventListener("click", (e) => {
+        const monthsToggle = e.target.closest(".by-prop-months-toggle");
+        const firmsToggle = e.target.closest(".by-month-firms-toggle");
+        if (monthsToggle) {
+          const row = monthsToggle.closest(".by-prop-row");
           const monthsEl = row.querySelector(".by-prop-months");
           const isHidden = monthsEl.classList.contains("hidden");
           monthsEl.classList.toggle("hidden", !isHidden);
-          btn.textContent = isHidden ? "Hide months" : "Show months";
-        });
+          monthsToggle.textContent = isHidden ? "Hide months" : "Show months";
+        } else if (firmsToggle) {
+          const row = firmsToggle.closest(".by-month-row");
+          const firmsEl = row.querySelector(".by-month-firms");
+          const isHidden = firmsEl.classList.contains("hidden");
+          firmsEl.classList.toggle("hidden", !isHidden);
+          firmsToggle.textContent = isHidden ? "Hide firms" : "Show firms";
+        }
       });
     } else {
       byPropSection.classList.add("hidden");
+    }
+
+    // Clear all cache (non-origin view): clear every firm's cache then refresh this view
+    if (!opts.skipClearAllListener) {
+      const clearAllCacheBtn = document.getElementById("clear-all-cache-btn");
+      clearAllCacheBtn.addEventListener("click", async () => {
+        if (!confirm("Clear all cached data for all firms? You will need to recalculate from scratch.")) return;
+        for (const f of FIRMS) await clearCacheForFirm(f.id);
+        await init({ skipClearAllListener: true });
+      });
     }
     return;
   }
@@ -343,8 +458,8 @@ async function init() {
 
   // ── Reset ──
   resetBtn.addEventListener("click", async () => {
-    if (!confirm("Clear all cached data? You will need to recalculate from scratch.")) return;
-    await chrome.storage.local.clear();
+    if (!confirm(`Clear cached data for ${firm.name}? You will need to recalculate for this firm.`)) return;
+    await clearCacheForFirm(firm.id);
     spentDisplay.textContent    = "—";
     receivedDisplay.textContent = "—";
     netDisplay.textContent      = "—";

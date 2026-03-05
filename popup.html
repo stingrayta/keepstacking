@@ -32,8 +32,13 @@
       <div id="wrong-tab-totals" class="wrong-tab-totals hidden"></div>
       <div id="by-prop-section" class="breakdown hidden">
         <div class="breakdown-header">
-          <span>By prop</span>
-          <button id="toggle-by-prop" class="toggle-btn">Show</button>
+          <div class="breakdown-header-left">
+            <div class="view-mode-toggle" role="group" aria-label="Breakdown view">
+              <button type="button" class="view-mode-btn active" data-mode="byProp">By prop</button>
+              <button type="button" class="view-mode-btn" data-mode="byMonth">By month</button>
+            </div>
+            <button id="toggle-by-prop" class="toggle-btn">Show</button>
+          </div>
         </div>
         <div class="breakdown-col-header">
           <span></span>
@@ -43,6 +48,14 @@
         </div>
         <div id="by-prop-list" class="breakdown-list hidden"></div>
       </div>
+      <button id="clear-all-cache-btn" class="btn btn-ghost" title="Clear all cached data">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="3 6 5 6 21 6"/>
+          <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
+          <path d="M10 11v6M14 11v6"/>
+          <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
+        </svg>
+      </button>
     </div>
 
     <!-- Main content -->

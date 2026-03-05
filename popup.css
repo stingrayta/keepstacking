@@ -280,6 +280,31 @@ body {
   margin-bottom: 8px;
 }
 
+.by-month-row {
+  border-top: 1px solid #1e2433;
+}
+
+.by-month-row:first-child {
+  border-top: none;
+}
+
+.by-month-summary-row {
+  border-top: 1px solid #1e2433;
+}
+
+.by-month-firms-toggle {
+  margin-left: 12px;
+  margin-bottom: 4px;
+  font-size: 12px;
+}
+
+.by-month-firms {
+  padding-left: 12px;
+  border-left: 2px solid #1e2433;
+  margin-left: 12px;
+  margin-bottom: 8px;
+}
+
 .breakdown-row-nested {
   padding: 5px 12px 5px 8px;
   font-size: 12px;
@@ -304,6 +329,43 @@ body {
   background: #111318;
   font-size: 13px;
   color: #94a3b8;
+}
+
+.breakdown-header-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.view-mode-toggle {
+  display: flex;
+  border-radius: 6px;
+  overflow: hidden;
+  border: 1px solid #1e2433;
+}
+
+.view-mode-btn {
+  padding: 4px 10px;
+  font-size: 12px;
+  font-weight: 500;
+  color: #64748b;
+  background: #0e1016;
+  border: none;
+  cursor: pointer;
+  transition: color 0.15s, background 0.15s;
+}
+
+.view-mode-btn:hover {
+  color: #94a3b8;
+}
+
+.view-mode-btn.active {
+  color: #0a0c10;
+  background: #f59e0b;
+}
+
+.view-mode-btn + .view-mode-btn {
+  border-left: 1px solid #1e2433;
 }
 
 .toggle-btn {
