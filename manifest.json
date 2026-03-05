@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "KeepStacking",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Track your total spending on prop trading platforms, with smart monthly caching.",
   "permissions": ["scripting", "activeTab", "storage"],
   "host_permissions": [
