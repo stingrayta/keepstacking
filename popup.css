@@ -226,17 +226,9 @@ body {
   background: transparent;
 }
 
-/* ── Notice ── */
-.notice {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  background: #111318;
-  border: 1px solid #2a2410;
-  border-radius: 8px;
-  padding: 10px 12px;
-  color: #cbd5e1;
-  font-size: 13px;
+/* ── Wrong-tab: Prop Dashboards section ── */
+#prop-dashboards-section .dashboard-links {
+  padding: 8px 12px;
 }
 
 /* ── Wrong-tab: dashboard links ── */
@@ -380,6 +372,12 @@ body {
   display: flex;
   align-items: center;
   gap: 12px;
+}
+
+.breakdown-title {
+  font-size: 13px;
+  color: #94a3b8;
+  font-weight: 600;
 }
 
 .view-mode-toggle {

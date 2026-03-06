@@ -19,16 +19,17 @@
       </div>
     </div>
 
-    <!-- Wrong tab notice -->
+    <!-- Wrong tab: Prop Dashboards + totals + breakdown -->
     <div id="wrong-tab" class="section hidden">
-      <div class="notice">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-          <circle cx="12" cy="12" r="10" stroke="#f59e0b" stroke-width="2"/>
-          <path d="M12 8v4M12 16h.01" stroke="#f59e0b" stroke-width="2" stroke-linecap="round"/>
-        </svg>
-        <span>Open your prop dashboard to start</span>
+      <div id="prop-dashboards-section" class="breakdown">
+        <div class="breakdown-header">
+          <div class="breakdown-header-left">
+            <span class="breakdown-title">Prop Dashboards</span>
+          </div>
+          <button id="toggle-prop-dashboards" class="toggle-btn" type="button">Hide</button>
+        </div>
+        <div id="dashboard-links" class="dashboard-links"></div>
       </div>
-      <div id="dashboard-links" class="dashboard-links"></div>
       <div id="wrong-tab-totals-wrap" class="wrong-tab-totals-wrap hidden">
         <div class="view-mode-toggle wrong-tab-pnl-toggle" role="group" aria-label="PNL range">
           <button type="button" class="view-mode-btn pnl-range-btn active" data-range="all">All data</button>

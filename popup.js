@@ -29,6 +29,7 @@ const breakdownSection = document.getElementById("breakdown-section");
 const toggleBreakdown  = document.getElementById("toggle-breakdown");
 const breakdownList    = document.getElementById("breakdown-list");
 const resetBtn         = document.getElementById("reset-btn");
+const togglePropDashboards = document.getElementById("toggle-prop-dashboards");
 
 const MAIN_DASH_VIEW_KEY = "mainDashViewMode";
 const PNL_RANGE_KEY = "pnlRange";
@@ -406,6 +407,15 @@ async function init(opts = {}) {
         window.close();
       });
     });
+
+    if (!togglePropDashboards.dataset.listenerAdded) {
+      togglePropDashboards.dataset.listenerAdded = "1";
+      togglePropDashboards.addEventListener("click", () => {
+        const isHidden = dashboardLinks.classList.contains("hidden");
+        dashboardLinks.classList.toggle("hidden", !isHidden);
+        togglePropDashboards.textContent = isHidden ? "Hide" : "Show";
+      });
+    }
 
     // Aggregate total payout/spend from cache (respecting PNL range)
     const pnlRange = await loadPnlRange();
