@@ -118,6 +118,26 @@ body {
   color: #64748b;
 }
 
+.pnl-range-toggle-wrap {
+  margin-top: 10px;
+  display: flex;
+  justify-content: center;
+}
+
+.wrong-tab-totals-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.wrong-tab-pnl-toggle {
+  align-self: flex-start;
+}
+
+.wrong-tab-totals-wrap.hidden {
+  display: none !important;
+}
+
 /* ── Status row ── */
 .status-row {
   display: flex;
@@ -299,6 +319,31 @@ body {
 }
 
 .by-month-firms {
+  padding-left: 12px;
+  border-left: 2px solid #1e2433;
+  margin-left: 12px;
+  margin-bottom: 8px;
+}
+
+.by-year-row {
+  border-top: 1px solid #1e2433;
+}
+
+.by-year-row:first-child {
+  border-top: none;
+}
+
+.by-year-summary-row {
+  border-top: 1px solid #1e2433;
+}
+
+.by-year-months-toggle {
+  margin-left: 12px;
+  margin-bottom: 4px;
+  font-size: 12px;
+}
+
+.by-year-months {
   padding-left: 12px;
   border-left: 2px solid #1e2433;
   margin-left: 12px;
