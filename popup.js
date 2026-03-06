@@ -34,6 +34,7 @@ const togglePropDashboards = document.getElementById("toggle-prop-dashboards");
 const MAIN_DASH_VIEW_KEY = "mainDashViewMode";
 const PNL_RANGE_KEY = "pnlRange";
 const MAIN_CONTENT_BREAKDOWN_VIEW_KEY = "mainContentBreakdownView";
+const PROP_DASHBOARDS_COLLAPSED_KEY = "propDashboardsCollapsed";
 
 // ── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -384,6 +385,18 @@ function saveMainContentBreakdownView(view) {
   chrome.storage.local.set({ [MAIN_CONTENT_BREAKDOWN_VIEW_KEY]: view });
 }
 
+function loadPropDashboardsCollapsed() {
+  return new Promise((resolve) => {
+    chrome.storage.local.get([PROP_DASHBOARDS_COLLAPSED_KEY], (data) => {
+      resolve(data[PROP_DASHBOARDS_COLLAPSED_KEY] === true);
+    });
+  });
+}
+
+function savePropDashboardsCollapsed(collapsed) {
+  chrome.storage.local.set({ [PROP_DASHBOARDS_COLLAPSED_KEY]: collapsed });
+}
+
 // ── Main ─────────────────────────────────────────────────────────────────────
 
 async function init(opts = {}) {
@@ -414,8 +427,13 @@ async function init(opts = {}) {
         const isHidden = dashboardLinks.classList.contains("hidden");
         dashboardLinks.classList.toggle("hidden", !isHidden);
         togglePropDashboards.textContent = isHidden ? "Hide" : "Show";
+        savePropDashboardsCollapsed(!isHidden);
       });
     }
+
+    const propDashboardsCollapsed = await loadPropDashboardsCollapsed();
+    dashboardLinks.classList.toggle("hidden", propDashboardsCollapsed);
+    togglePropDashboards.textContent = propDashboardsCollapsed ? "Show" : "Hide";
 
     // Aggregate total payout/spend from cache (respecting PNL range)
     const pnlRange = await loadPnlRange();
