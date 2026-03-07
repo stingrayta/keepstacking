@@ -14,7 +14,16 @@ A Chrome extension for prop traders to track spending, payouts, and net profit a
 
 ---
 
-## How to Install (Developer Mode)
+## Install
+
+| Browser | Link |
+|---------|------|
+| Chrome | [Chrome Web Store](https://chromewebstore.google.com/detail/ijnmgininjnghpblmgeabanhidilbmhf) |
+| Edge | [Microsoft Edge Add-ons](https://microsoftedge.microsoft.com/addons/detail/keepstacking/bbeflhooembibkckkfognklladichbbl) |
+
+---
+
+## Install from Source (Developer Mode)
 
 1. Open Chrome and go to `chrome://extensions`
 2. Enable **Developer mode** (top-right toggle)
