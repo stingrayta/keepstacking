@@ -19,23 +19,31 @@
       </div>
     </div>
 
-    <!-- Wrong tab notice -->
+    <!-- Wrong tab: Prop Dashboards + totals + breakdown -->
     <div id="wrong-tab" class="section hidden">
-      <div class="notice">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-          <circle cx="12" cy="12" r="10" stroke="#f59e0b" stroke-width="2"/>
-          <path d="M12 8v4M12 16h.01" stroke="#f59e0b" stroke-width="2" stroke-linecap="round"/>
-        </svg>
-        <span>Open your prop dashboard to start</span>
+      <div id="prop-dashboards-section" class="breakdown">
+        <div class="breakdown-header">
+          <div class="breakdown-header-left">
+            <span class="breakdown-title">Prop Dashboards</span>
+          </div>
+          <button id="toggle-prop-dashboards" class="toggle-btn" type="button">Hide</button>
+        </div>
+        <div id="dashboard-links" class="dashboard-links"></div>
       </div>
-      <div id="dashboard-links" class="dashboard-links"></div>
-      <div id="wrong-tab-totals" class="wrong-tab-totals hidden"></div>
+      <div id="wrong-tab-totals-wrap" class="wrong-tab-totals-wrap hidden">
+        <div class="view-mode-toggle wrong-tab-pnl-toggle" role="group" aria-label="PNL range">
+          <button type="button" class="view-mode-btn pnl-range-btn active" data-range="all">All data</button>
+          <button type="button" class="view-mode-btn pnl-range-btn" data-range="thisYear">This year</button>
+        </div>
+        <div id="wrong-tab-totals" class="wrong-tab-totals"></div>
+      </div>
       <div id="by-prop-section" class="breakdown hidden">
         <div class="breakdown-header">
           <div class="breakdown-header-left">
             <div class="view-mode-toggle" role="group" aria-label="Breakdown view">
               <button type="button" class="view-mode-btn active" data-mode="byProp">By prop</button>
               <button type="button" class="view-mode-btn" data-mode="byMonth">By month</button>
+              <button type="button" class="view-mode-btn" data-mode="byYear">By year</button>
             </div>
             <button id="toggle-by-prop" class="toggle-btn">Show</button>
           </div>
@@ -78,6 +86,12 @@
         <div class="net-label">Net Profit</div>
         <div id="net-display" class="net-amount">—</div>
         <div id="last-calculated" class="last-calculated"></div>
+        <div class="pnl-range-toggle-wrap">
+          <div class="view-mode-toggle" role="group" aria-label="PNL range">
+            <button type="button" class="view-mode-btn pnl-range-btn active" data-range="all">All data</button>
+            <button type="button" class="view-mode-btn pnl-range-btn" data-range="thisYear">This year</button>
+          </div>
+        </div>
       </div>
 
       <!-- Status / progress -->
@@ -92,8 +106,13 @@
       <!-- Combined monthly breakdown -->
       <div id="breakdown-section" class="breakdown hidden">
         <div class="breakdown-header">
-          <span>By Month</span>
-          <button id="toggle-breakdown" class="toggle-btn">Show</button>
+          <div class="breakdown-header-left">
+            <div class="view-mode-toggle" role="group" aria-label="Breakdown view">
+              <button type="button" class="view-mode-btn breakdown-view-btn active" data-view="byMonth">By Month</button>
+              <button type="button" class="view-mode-btn breakdown-view-btn" data-view="byYear">By Year</button>
+            </div>
+            <button id="toggle-breakdown" class="toggle-btn">Show</button>
+          </div>
         </div>
         <div class="breakdown-col-header">
           <span></span>

@@ -13,6 +13,7 @@ const FIRMS = [apex, alphaFutures, bulenox, lucid, mff, tpt];
 const wrongTab         = document.getElementById("wrong-tab");
 const mainContent      = document.getElementById("main-content");
 const dashboardLinks   = document.getElementById("dashboard-links");
+const wrongTabTotalsWrap = document.getElementById("wrong-tab-totals-wrap");
 const wrongTabTotals   = document.getElementById("wrong-tab-totals");
 const byPropSection    = document.getElementById("by-prop-section");
 const toggleByProp     = document.getElementById("toggle-by-prop");
@@ -28,8 +29,12 @@ const breakdownSection = document.getElementById("breakdown-section");
 const toggleBreakdown  = document.getElementById("toggle-breakdown");
 const breakdownList    = document.getElementById("breakdown-list");
 const resetBtn         = document.getElementById("reset-btn");
+const togglePropDashboards = document.getElementById("toggle-prop-dashboards");
 
 const MAIN_DASH_VIEW_KEY = "mainDashViewMode";
+const PNL_RANGE_KEY = "pnlRange";
+const MAIN_CONTENT_BREAKDOWN_VIEW_KEY = "mainContentBreakdownView";
+const PROP_DASHBOARDS_COLLAPSED_KEY = "propDashboardsCollapsed";
 
 // ── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -74,6 +79,36 @@ function setCalculating(on) {
   else clearStatus();
 }
 
+function getCurrentYear() {
+  return String(new Date().getFullYear());
+}
+
+/** @param {string[]} keys - Month keys YYYY-MM */
+function filterMonthKeysByRange(keys, range) {
+  if (range === "all") return keys;
+  const year = getCurrentYear();
+  return keys.filter(k => k.startsWith(year));
+}
+
+/**
+ * Filter spending/payout month maps by PNL range.
+ * @returns {{ spendingMonths: Record<string,number>, payoutMonths: Record<string,number> }}
+ */
+function filterMonthsByRange(spendingMonths, payoutMonths, range) {
+  if (range === "all") {
+    return { spendingMonths, payoutMonths };
+  }
+  const year = getCurrentYear();
+  const pred = (k) => k.startsWith(year);
+  const filteredSpending = Object.fromEntries(
+    Object.entries(spendingMonths).filter(([k]) => pred(k))
+  );
+  const filteredPayouts = Object.fromEntries(
+    Object.entries(payoutMonths).filter(([k]) => pred(k))
+  );
+  return { spendingMonths: filteredSpending, payoutMonths: filteredPayouts };
+}
+
 function buildMonthlyAggregate(firmsWithCache) {
   const allMonthKeys = [...new Set(
     firmsWithCache.flatMap(({ cache }) => [
@@ -97,6 +132,50 @@ function buildMonthlyAggregate(firmsWithCache) {
     monthlyData[key] = { spent, received, firms };
   }
   return { allMonthKeys, monthlyData };
+}
+
+function buildYearlyAggregate(firmsWithCache) {
+  const { allMonthKeys, monthlyData } = buildMonthlyAggregate(firmsWithCache);
+  const byYear = {};
+  for (const monthKey of allMonthKeys) {
+    const year = monthKey.slice(0, 4);
+    if (!byYear[year]) byYear[year] = { spent: 0, received: 0, months: [] };
+    const { spent, received, firms } = monthlyData[monthKey];
+    byYear[year].spent += spent;
+    byYear[year].received += received;
+    byYear[year].months.push({ monthKey, spent, received, firms });
+  }
+  const allYearKeys = Object.keys(byYear).sort((a, b) => b.localeCompare(a));
+  return { allYearKeys, yearlyData: byYear };
+}
+
+function renderMainDashByYear(allYearKeys, yearlyData) {
+  byPropList.innerHTML = allYearKeys.map(year => {
+    const { spent, received, months } = yearlyData[year];
+    const net = received - spent;
+    const netClass = net >= 0 ? "positive" : "negative";
+    const monthRows = months
+      .sort((a, b) => b.monthKey.localeCompare(a.monthKey))
+      .map(({ monthKey, spent: s, received: r }) => {
+        const n = r - s;
+        return `<div class="breakdown-row breakdown-row-nested">
+          <span class="breakdown-month">${formatMonthKey(monthKey)}</span>
+          <span class="breakdown-amount spent">${formatUSD(s)}</span>
+          <span class="breakdown-amount received">${formatUSD(r)}</span>
+          <span class="breakdown-amount ${n >= 0 ? "positive" : "negative"}">${formatUSD(n)}</span>
+        </div>`;
+      }).join("");
+    return `<div class="by-year-row" data-year="${year}">
+      <div class="breakdown-row by-year-summary-row">
+        <span class="breakdown-month">${year}</span>
+        <span class="breakdown-amount spent">${formatUSD(spent)}</span>
+        <span class="breakdown-amount received">${formatUSD(received)}</span>
+        <span class="breakdown-amount ${netClass}">${formatUSD(net)}</span>
+      </div>
+      <button type="button" class="toggle-btn by-year-months-toggle">Show months</button>
+      <div class="by-year-months hidden">${monthRows}</div>
+    </div>`;
+  }).join("");
 }
 
 function renderMainDashByProp(firmsWithCache) {
@@ -159,38 +238,80 @@ function renderMainDashByMonth(allMonthKeys, monthlyData) {
 
 // ── Render ───────────────────────────────────────────────────────────────────
 
-function renderTotal(spendingMonths, payoutMonths, lastTs) {
-  const totalSpent    = Object.values(spendingMonths).reduce((s, v) => s + v, 0);
-  const totalReceived = Object.values(payoutMonths).reduce((s, v) => s + v, 0);
+/**
+ * @param {Record<string,number>} spendingMonths
+ * @param {Record<string,number>} payoutMonths
+ * @param {number|null} lastTs
+ * @param {{ pnlRange?: string, breakdownView?: string }} [options]
+ */
+function renderTotal(spendingMonths, payoutMonths, lastTs, options = {}) {
+  const pnlRange = options.pnlRange === "thisYear" ? "thisYear" : "all";
+  const { spendingMonths: s, payoutMonths: p } = filterMonthsByRange(spendingMonths, payoutMonths, pnlRange);
+
+  const totalSpent    = Object.values(s).reduce((sum, v) => sum + v, 0);
+  const totalReceived = Object.values(p).reduce((sum, v) => sum + v, 0);
   const net           = totalReceived - totalSpent;
   const hasData       = totalSpent > 0 || totalReceived > 0;
 
   spentDisplay.textContent    = totalSpent    > 0 ? formatUSD(totalSpent)    : "—";
-  receivedDisplay.textContent = formatUSD(totalReceived);
+  receivedDisplay.textContent  = formatUSD(totalReceived);
   netDisplay.textContent      = hasData ? formatUSD(net) : "—";
   netDisplay.className        = "net-amount" + (hasData ? (net >= 0 ? " positive" : " negative") : "");
   lastCalculatedEl.textContent = lastTs ? `Updated ${timeAgo(lastTs)}` : "";
 
-  // Combined monthly breakdown
-  const allKeys = [...new Set([
-    ...Object.keys(spendingMonths),
-    ...Object.keys(payoutMonths),
-  ])].sort((a, b) => b.localeCompare(a));
+  const breakdownView = options.breakdownView === "byYear" ? "byYear" : "byMonth";
+  const allKeys = [...new Set([...Object.keys(s), ...Object.keys(p)])].sort((a, b) => b.localeCompare(a));
 
   if (allKeys.length > 0) {
     breakdownSection.classList.remove("hidden");
-    breakdownList.innerHTML = allKeys.map(k => {
-      const spent    = spendingMonths[k] || 0;
-      const received = payoutMonths[k]   || 0;
-      const rowNet   = received - spent;
-      const netClass = rowNet >= 0 ? "positive" : "negative";
-      return `<div class="breakdown-row">
-        <span class="breakdown-month">${formatMonthKey(k)}</span>
-        <span class="breakdown-amount spent">${formatUSD(spent)}</span>
-        <span class="breakdown-amount received">${formatUSD(received)}</span>
-        <span class="breakdown-amount ${netClass}">${formatUSD(rowNet)}</span>
-      </div>`;
-    }).join("");
+    if (breakdownView === "byYear") {
+      const byYear = {};
+      for (const k of allKeys) {
+        const year = k.slice(0, 4);
+        if (!byYear[year]) byYear[year] = { spent: 0, received: 0, keys: [] };
+        byYear[year].spent += s[k] || 0;
+        byYear[year].received += p[k] || 0;
+        byYear[year].keys.push(k);
+      }
+      const yearKeys = Object.keys(byYear).sort((a, b) => b.localeCompare(a));
+      breakdownList.innerHTML = yearKeys.map(year => {
+        const { spent, received, keys } = byYear[year];
+        const rowNet = received - spent;
+        const netClass = rowNet >= 0 ? "positive" : "negative";
+        const monthRows = keys.sort((a, b) => b.localeCompare(a)).map(k => {
+          const sk = s[k] || 0, pk = p[k] || 0, nk = pk - sk;
+          return `<div class="breakdown-row breakdown-row-nested">
+            <span class="breakdown-month">${formatMonthKey(k)}</span>
+            <span class="breakdown-amount spent">${formatUSD(sk)}</span>
+            <span class="breakdown-amount received">${formatUSD(pk)}</span>
+            <span class="breakdown-amount ${nk >= 0 ? "positive" : "negative"}">${formatUSD(nk)}</span>
+          </div>`;
+        }).join("");
+        return `<div class="by-year-row" data-year="${year}">
+          <div class="breakdown-row by-year-summary-row">
+            <span class="breakdown-month">${year}</span>
+            <span class="breakdown-amount spent">${formatUSD(spent)}</span>
+            <span class="breakdown-amount received">${formatUSD(received)}</span>
+            <span class="breakdown-amount ${netClass}">${formatUSD(rowNet)}</span>
+          </div>
+          <button type="button" class="toggle-btn by-year-months-toggle">Show months</button>
+          <div class="by-year-months hidden">${monthRows}</div>
+        </div>`;
+      }).join("");
+    } else {
+      breakdownList.innerHTML = allKeys.map(k => {
+        const spent    = s[k] || 0;
+        const received = p[k] || 0;
+        const rowNet   = received - spent;
+        const netClass = rowNet >= 0 ? "positive" : "negative";
+        return `<div class="breakdown-row">
+          <span class="breakdown-month">${formatMonthKey(k)}</span>
+          <span class="breakdown-amount spent">${formatUSD(spent)}</span>
+          <span class="breakdown-amount received">${formatUSD(received)}</span>
+          <span class="breakdown-amount ${netClass}">${formatUSD(rowNet)}</span>
+        </div>`;
+      }).join("");
+    }
   } else {
     breakdownSection.classList.add("hidden");
   }
@@ -238,6 +359,44 @@ function clearCacheForFirm(firmId) {
   });
 }
 
+function loadPnlRange() {
+  return new Promise((resolve) => {
+    chrome.storage.local.get([PNL_RANGE_KEY], (data) => {
+      const v = data[PNL_RANGE_KEY];
+      resolve(v === "thisYear" ? "thisYear" : "all");
+    });
+  });
+}
+
+function savePnlRange(range) {
+  chrome.storage.local.set({ [PNL_RANGE_KEY]: range });
+}
+
+function loadMainContentBreakdownView() {
+  return new Promise((resolve) => {
+    chrome.storage.local.get([MAIN_CONTENT_BREAKDOWN_VIEW_KEY], (data) => {
+      const v = data[MAIN_CONTENT_BREAKDOWN_VIEW_KEY];
+      resolve(v === "byYear" ? "byYear" : "byMonth");
+    });
+  });
+}
+
+function saveMainContentBreakdownView(view) {
+  chrome.storage.local.set({ [MAIN_CONTENT_BREAKDOWN_VIEW_KEY]: view });
+}
+
+function loadPropDashboardsCollapsed() {
+  return new Promise((resolve) => {
+    chrome.storage.local.get([PROP_DASHBOARDS_COLLAPSED_KEY], (data) => {
+      resolve(data[PROP_DASHBOARDS_COLLAPSED_KEY] === true);
+    });
+  });
+}
+
+function savePropDashboardsCollapsed(collapsed) {
+  chrome.storage.local.set({ [PROP_DASHBOARDS_COLLAPSED_KEY]: collapsed });
+}
+
 // ── Main ─────────────────────────────────────────────────────────────────────
 
 async function init(opts = {}) {
@@ -262,12 +421,34 @@ async function init(opts = {}) {
       });
     });
 
-    // Aggregate total payout/spend from cache
-    const totalSpent = caches.reduce((s, c) => s + Object.values(c.spendingMonths).reduce((t, v) => t + v, 0), 0);
-    const totalReceived = caches.reduce((s, c) => s + Object.values(c.payoutMonths).reduce((t, v) => t + v, 0), 0);
+    if (!togglePropDashboards.dataset.listenerAdded) {
+      togglePropDashboards.dataset.listenerAdded = "1";
+      togglePropDashboards.addEventListener("click", () => {
+        const isHidden = dashboardLinks.classList.contains("hidden");
+        dashboardLinks.classList.toggle("hidden", !isHidden);
+        togglePropDashboards.textContent = isHidden ? "Hide" : "Show";
+        savePropDashboardsCollapsed(!isHidden);
+      });
+    }
+
+    const propDashboardsCollapsed = await loadPropDashboardsCollapsed();
+    dashboardLinks.classList.toggle("hidden", propDashboardsCollapsed);
+    togglePropDashboards.textContent = propDashboardsCollapsed ? "Show" : "Hide";
+
+    // Aggregate total payout/spend from cache (respecting PNL range)
+    const pnlRange = await loadPnlRange();
+    const firmsWithFilteredCache = firmsWithCache.map(({ firm, cache }) => ({
+      firm,
+      cache: {
+        ...filterMonthsByRange(cache.spendingMonths, cache.payoutMonths, pnlRange),
+        lastCalculated: cache.lastCalculated,
+      },
+    }));
+    const totalSpent = firmsWithFilteredCache.reduce((s, { cache }) => s + Object.values(cache.spendingMonths).reduce((t, v) => t + v, 0), 0);
+    const totalReceived = firmsWithFilteredCache.reduce((s, { cache }) => s + Object.values(cache.payoutMonths).reduce((t, v) => t + v, 0), 0);
     const hasAnyCache = totalSpent > 0 || totalReceived > 0;
     if (hasAnyCache) {
-      wrongTabTotals.classList.remove("hidden");
+      wrongTabTotalsWrap.classList.remove("hidden");
       const net = totalReceived - totalSpent;
       wrongTabTotals.innerHTML = `
         <div class="wrong-tab-totals-row">
@@ -284,8 +465,60 @@ async function init(opts = {}) {
         </div>
       `;
     } else {
-      wrongTabTotals.classList.add("hidden");
+      wrongTabTotalsWrap.classList.add("hidden");
     }
+
+    const updateWrongTabPnLToggle = (range) => {
+      const filtered = firmsWithCache.map(({ firm, cache }) => ({
+        firm,
+        cache: {
+          ...filterMonthsByRange(cache.spendingMonths, cache.payoutMonths, range),
+          lastCalculated: cache.lastCalculated,
+        },
+      }));
+      const spent = filtered.reduce((s, { cache }) => s + Object.values(cache.spendingMonths).reduce((t, v) => t + v, 0), 0);
+      const received = filtered.reduce((s, { cache }) => s + Object.values(cache.payoutMonths).reduce((t, v) => t + v, 0), 0);
+      const net = received - spent;
+      wrongTabTotals.innerHTML = `
+        <div class="wrong-tab-totals-row">
+          <span class="metric-label">Spent</span>
+          <span class="metric-amount spent">${formatUSD(spent)}</span>
+        </div>
+        <div class="wrong-tab-totals-row">
+          <span class="metric-label">Received</span>
+          <span class="metric-amount received">${formatUSD(received)}</span>
+        </div>
+        <div class="wrong-tab-totals-row">
+          <span class="metric-label">Net</span>
+          <span class="metric-amount ${net >= 0 ? "positive" : "negative"}">${formatUSD(net)}</span>
+        </div>
+      `;
+    };
+
+    wrongTabTotalsWrap.querySelectorAll(".pnl-range-btn").forEach((btn) => {
+      btn.classList.toggle("active", btn.dataset.range === pnlRange);
+      btn.addEventListener("click", () => {
+        const range = btn.dataset.range === "thisYear" ? "thisYear" : "all";
+        savePnlRange(range);
+        wrongTabTotalsWrap.querySelectorAll(".pnl-range-btn").forEach((b) => b.classList.toggle("active", b.dataset.range === range));
+        updateWrongTabPnLToggle(range);
+        const filtered = firmsWithCache.map(({ firm, cache }) => ({
+          firm,
+          cache: {
+            ...filterMonthsByRange(cache.spendingMonths, cache.payoutMonths, range),
+            lastCalculated: cache.lastCalculated,
+          },
+        }));
+        const { allMonthKeys, monthlyData } = buildMonthlyAggregate(filtered);
+        const currentMode = byPropSection.querySelector(".view-mode-btn.active")?.dataset.mode || "byProp";
+        if (currentMode === "byProp") renderMainDashByProp(filtered);
+        else if (currentMode === "byMonth") renderMainDashByMonth(allMonthKeys, monthlyData);
+        else if (currentMode === "byYear") {
+          const { allYearKeys, yearlyData } = buildYearlyAggregate(filtered);
+          renderMainDashByYear(allYearKeys, yearlyData);
+        }
+      });
+    });
 
     // By-prop / By-month section
     if (firmsWithCache.length > 0) {
@@ -294,20 +527,35 @@ async function init(opts = {}) {
       const viewModeBtns = byPropSection.querySelectorAll(".view-mode-btn");
       const loadViewMode = () => new Promise((resolve) => {
         chrome.storage.local.get([MAIN_DASH_VIEW_KEY], (data) => {
-          resolve(data[MAIN_DASH_VIEW_KEY] || "byProp");
+          const v = data[MAIN_DASH_VIEW_KEY];
+          resolve(v === "byYear" || v === "byMonth" ? v : "byProp");
         });
       });
       const saveViewMode = (mode) => {
         chrome.storage.local.set({ [MAIN_DASH_VIEW_KEY]: mode });
       };
 
-      const { allMonthKeys, monthlyData } = buildMonthlyAggregate(firmsWithCache);
+      const getFilteredForBreakdown = () => {
+        const range = wrongTabTotalsWrap.querySelector(".pnl-range-btn.active")?.dataset.range === "thisYear" ? "thisYear" : "all";
+        return firmsWithCache.map(({ firm, cache }) => ({
+          firm,
+          cache: {
+            ...filterMonthsByRange(cache.spendingMonths, cache.payoutMonths, range),
+            lastCalculated: cache.lastCalculated,
+          },
+        }));
+      };
 
       const renderMainDashBreakdown = (mode) => {
+        const filtered = getFilteredForBreakdown();
         if (mode === "byProp") {
-          renderMainDashByProp(firmsWithCache);
-        } else {
+          renderMainDashByProp(filtered);
+        } else if (mode === "byMonth") {
+          const { allMonthKeys, monthlyData } = buildMonthlyAggregate(filtered);
           renderMainDashByMonth(allMonthKeys, monthlyData);
+        } else if (mode === "byYear") {
+          const { allYearKeys, yearlyData } = buildYearlyAggregate(filtered);
+          renderMainDashByYear(allYearKeys, yearlyData);
         }
         viewModeBtns.forEach((btn) => {
           btn.classList.toggle("active", btn.dataset.mode === mode);
@@ -335,6 +583,7 @@ async function init(opts = {}) {
       byPropList.addEventListener("click", (e) => {
         const monthsToggle = e.target.closest(".by-prop-months-toggle");
         const firmsToggle = e.target.closest(".by-month-firms-toggle");
+        const yearMonthsToggle = e.target.closest(".by-year-months-toggle");
         if (monthsToggle) {
           const row = monthsToggle.closest(".by-prop-row");
           const monthsEl = row.querySelector(".by-prop-months");
@@ -347,6 +596,12 @@ async function init(opts = {}) {
           const isHidden = firmsEl.classList.contains("hidden");
           firmsEl.classList.toggle("hidden", !isHidden);
           firmsToggle.textContent = isHidden ? "Hide firms" : "Show firms";
+        } else if (yearMonthsToggle) {
+          const row = yearMonthsToggle.closest(".by-year-row");
+          const monthsEl = row.querySelector(".by-year-months");
+          const isHidden = monthsEl.classList.contains("hidden");
+          monthsEl.classList.toggle("hidden", !isHidden);
+          yearMonthsToggle.textContent = isHidden ? "Hide months" : "Show months";
         }
       });
     } else {
@@ -369,10 +624,35 @@ async function init(opts = {}) {
 
   const cache = await loadCache(firm.id);
   const hasCache = Object.keys(cache.spendingMonths).length > 0 || Object.keys(cache.payoutMonths).length > 0;
+  const pnlRange = await loadPnlRange();
+  const breakdownView = await loadMainContentBreakdownView();
+
   if (hasCache) {
-    renderTotal(cache.spendingMonths, cache.payoutMonths, cache.lastCalculated);
+    renderTotal(cache.spendingMonths, cache.payoutMonths, cache.lastCalculated, { pnlRange, breakdownView });
     calcBtn.textContent = "Recalculate";
   }
+
+  const mainPnlBtns = mainContent.querySelectorAll(".pnl-range-btn");
+  mainPnlBtns.forEach((btn) => {
+    btn.classList.toggle("active", btn.dataset.range === pnlRange);
+    btn.addEventListener("click", () => {
+      const range = btn.dataset.range === "thisYear" ? "thisYear" : "all";
+      savePnlRange(range);
+      mainPnlBtns.forEach((b) => b.classList.toggle("active", b.dataset.range === range));
+      if (hasCache) renderTotal(cache.spendingMonths, cache.payoutMonths, cache.lastCalculated, { pnlRange: range, breakdownView });
+    });
+  });
+
+  const breakdownViewBtns = mainContent.querySelectorAll(".breakdown-view-btn");
+  breakdownViewBtns.forEach((btn) => {
+    btn.classList.toggle("active", btn.dataset.view === breakdownView);
+    btn.addEventListener("click", () => {
+      const view = btn.dataset.view === "byYear" ? "byYear" : "byMonth";
+      saveMainContentBreakdownView(view);
+      breakdownViewBtns.forEach((b) => b.classList.toggle("active", b.dataset.view === view));
+      if (hasCache) renderTotal(cache.spendingMonths, cache.payoutMonths, cache.lastCalculated, { pnlRange, breakdownView: view });
+    });
+  });
 
   // ── Calculate ──
   calcBtn.addEventListener("click", async () => {
@@ -439,7 +719,9 @@ async function init(opts = {}) {
         `Done — spending: ${spendingPagesFetched}/${spendingTotalPages} page(s), ` +
         `payouts: ${payoutPagesFetched}/${payoutTotalPages} page(s)`
       );
-      renderTotal(mergedSpending, mergedPayouts, now);
+      const currentPnlRange = mainContent.querySelector(".pnl-range-btn.active")?.dataset.range === "thisYear" ? "thisYear" : "all";
+      const currentBreakdownView = mainContent.querySelector(".breakdown-view-btn.active")?.dataset.view === "byYear" ? "byYear" : "byMonth";
+      renderTotal(mergedSpending, mergedPayouts, now, { pnlRange: currentPnlRange, breakdownView: currentBreakdownView });
       setTimeout(clearStatus, 3000);
     } catch (err) {
       const msg = err?.message || String(err);
@@ -454,6 +736,16 @@ async function init(opts = {}) {
     const isHidden = breakdownList.classList.contains("hidden");
     breakdownList.classList.toggle("hidden", !isHidden);
     toggleBreakdown.textContent = isHidden ? "Hide" : "Show";
+  });
+
+  breakdownList.addEventListener("click", (e) => {
+    const t = e.target.closest(".by-year-months-toggle");
+    if (!t) return;
+    const row = t.closest(".by-year-row");
+    const monthsEl = row.querySelector(".by-year-months");
+    const isHidden = monthsEl.classList.contains("hidden");
+    monthsEl.classList.toggle("hidden", !isHidden);
+    t.textContent = isHidden ? "Hide months" : "Show months";
   });
 
   // ── Reset ──

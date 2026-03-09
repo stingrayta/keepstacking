@@ -118,6 +118,26 @@ body {
   color: #64748b;
 }
 
+.pnl-range-toggle-wrap {
+  margin-top: 10px;
+  display: flex;
+  justify-content: center;
+}
+
+.wrong-tab-totals-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.wrong-tab-pnl-toggle {
+  align-self: flex-start;
+}
+
+.wrong-tab-totals-wrap.hidden {
+  display: none !important;
+}
+
 /* ── Status row ── */
 .status-row {
   display: flex;
@@ -206,17 +226,9 @@ body {
   background: transparent;
 }
 
-/* ── Notice ── */
-.notice {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  background: #111318;
-  border: 1px solid #2a2410;
-  border-radius: 8px;
-  padding: 10px 12px;
-  color: #cbd5e1;
-  font-size: 13px;
+/* ── Wrong-tab: Prop Dashboards section ── */
+#prop-dashboards-section .dashboard-links {
+  padding: 8px 12px;
 }
 
 /* ── Wrong-tab: dashboard links ── */
@@ -305,6 +317,31 @@ body {
   margin-bottom: 8px;
 }
 
+.by-year-row {
+  border-top: 1px solid #1e2433;
+}
+
+.by-year-row:first-child {
+  border-top: none;
+}
+
+.by-year-summary-row {
+  border-top: 1px solid #1e2433;
+}
+
+.by-year-months-toggle {
+  margin-left: 12px;
+  margin-bottom: 4px;
+  font-size: 12px;
+}
+
+.by-year-months {
+  padding-left: 12px;
+  border-left: 2px solid #1e2433;
+  margin-left: 12px;
+  margin-bottom: 8px;
+}
+
 .breakdown-row-nested {
   padding: 5px 12px 5px 8px;
   font-size: 12px;
@@ -335,6 +372,12 @@ body {
   display: flex;
   align-items: center;
   gap: 12px;
+}
+
+.breakdown-title {
+  font-size: 13px;
+  color: #94a3b8;
+  font-weight: 600;
 }
 
 .view-mode-toggle {
