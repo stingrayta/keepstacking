@@ -767,18 +767,8 @@ async function init(opts = {}) {
 
       setStatus("Fetching data…");
 
-      // TopStep: auth token from HttpOnly refresh_token cookie (must be fetched in extension context)
-      let scrapeArgs = [cachedSpendingKeys, cachedPayoutKeys];
-      if (firm.id === "topstep") {
-        const cookie = await chrome.cookies.get({
-          url:  "https://dashboard.topstep.com",
-          name: "refresh_token",
-        });
-        if (!cookie?.value) {
-          throw new Error("TopStep auth token not found. Make sure you are logged in at dashboard.topstep.com.");
-        }
-        scrapeArgs.push(cookie.value);
-      }
+      const scrapeArgs = [cachedSpendingKeys, cachedPayoutKeys];
+      // TopStep: scraper fetches token from GET api.topstep.com/me/profile/ (credentials: include)
 
       // firm.scrape is a self-contained function — Chrome serializes it
       // automatically. Each firm file owns its own scraping logic entirely.
@@ -801,14 +791,18 @@ async function init(opts = {}) {
         const msg = exc?.description ?? exc?.value ?? entry.exceptionDetails.text ?? JSON.stringify(entry.exceptionDetails);
         throw new Error(msg);
       }
-      const scraperResult = entry.result;
+      let scraperResult = entry.result;
+      // Handle serialization edge cases (e.g. string) and ensure we have an object
+      if (typeof scraperResult === "string") {
+        try { scraperResult = JSON.parse(scraperResult); } catch { /* fall through */ }
+      }
       if (!scraperResult || typeof scraperResult !== "object") throw new Error("Unexpected scraper result.");
 
       const {
-        spendingMonths: newSpending,
-        payoutMonths:   newPayouts,
-        spendingPagesFetched, payoutPagesFetched,
-        spendingTotalPages,   payoutTotalPages,
+        spendingMonths: newSpending = {},
+        payoutMonths:   newPayouts = {},
+        spendingPagesFetched = 0, payoutPagesFetched = 0,
+        spendingTotalPages = 1,   payoutTotalPages = 1,
       } = scraperResult;
 
       const today  = new Date();
@@ -819,12 +813,12 @@ async function init(opts = {}) {
       //   New month (uncached) → add it
       //   Past cached month    → keep old cached value (full-scan result is correct)
       const mergedSpending = { ...cachedSpending };
-      Object.entries(newSpending).forEach(([k, v]) => {
+      Object.entries(newSpending || {}).forEach(([k, v]) => {
         if (k >= nowKey || !cachedSpending[k]) mergedSpending[k] = v;
       });
 
       const mergedPayouts = { ...cachedPayouts };
-      Object.entries(newPayouts).forEach(([k, v]) => {
+      Object.entries(newPayouts || {}).forEach(([k, v]) => {
         if (k >= nowKey || !cachedPayouts[k]) mergedPayouts[k] = v;
       });
 

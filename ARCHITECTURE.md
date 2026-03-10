@@ -74,7 +74,7 @@ chrome.scripting.executeScript({
 
 This means each `scrape()` function must be **fully self-contained** — no imports, no closures over external variables. All helpers must be defined inside the function body.
 
-**Exception:** TopStep uses an HttpOnly `refresh_token` cookie. The popup fetches it via `chrome.cookies` and passes it as a third argument to `scrape(cachedSpendingKeys, cachedPayoutKeys, authToken)`.
+**Exception:** TopStep fetches its own token: `GET api.topstep.com/me/profile/` with `credentials: "include"` (cookie auth) returns `{ token }` used as Bearer for GraphQL and payouts.
 
 ---
 
@@ -151,9 +151,9 @@ This means a full re-fetch only happens on the very first run. Subsequent recalc
 - Payouts: `GET payments/api/Wallets/transactions` — sum where type=0, status=1
 - Cookie-based auth (same-origin)
 
-### TopStep — GraphQL + REST (Bearer from HttpOnly cookie)
+### TopStep — GraphQL + REST (Bearer from profile)
 
-- Auth: `refresh_token` cookie fetched by popup via `chrome.cookies`, passed as third scrape arg
+- Auth: `GET api.topstep.com/me/profile/` with `credentials: "include"` returns `{ token }`
 - Spending: GraphQL `GetAllPurchasesByUser` at `crystal.topstep.com`
 - Payouts: REST `GET api.topstep.com/me/payouts`
 

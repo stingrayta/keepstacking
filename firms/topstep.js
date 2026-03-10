@@ -1,22 +1,28 @@
 // TopStep — scraper
-// Spending: GraphQL GetAllPurchasesByUser at crystal.topstep.com, Bearer token from refresh_token cookie
-// Payouts:  REST GET api.topstep.com/me/payouts, same Bearer token
-// Auth:     refresh_token cookie (HttpOnly) — popup passes token as third arg via chrome.cookies
+// Spending: GraphQL GetAllPurchasesByUser at crystal.topstep.com
+// Payouts:  REST GET api.topstep.com/me/payouts
+// Auth:     GET api.topstep.com/me/profile/ with credentials returns { token } — use as Bearer
 
 export const id     = "topstep";
 export const name   = "TopStep";
 export const origin = "https://dashboard.topstep.com";
 
-export async function scrape(cachedSpendingKeys, cachedPayoutKeys, authToken) {
-  if (!authToken) throw new Error("TopStep auth token not found. Make sure you are logged in at dashboard.topstep.com.");
-
+export async function scrape(cachedSpendingKeys, cachedPayoutKeys, _authToken) {
+  const PROFILE_URL = "https://api.topstep.com/me/profile/";
   const GRAPHQL_URL = "https://crystal.topstep.com/graphql/GetAllPurchasesByUser";
   const PAYOUTS_URL = "https://api.topstep.com/me/payouts";
   const PAGE_SIZE   = 50;
 
+  // Get access token from profile endpoint (accepts cookie auth when on dashboard)
+  const profileRes = await fetch(PROFILE_URL, { credentials: "include" });
+  if (!profileRes.ok) throw new Error("TopStep auth failed. Make sure you are logged in at dashboard.topstep.com.");
+  const profileJson = await profileRes.json();
+  const token = profileJson?.token;
+  if (!token) throw new Error("TopStep auth token not found. Make sure you are logged in at dashboard.topstep.com.");
+
   const headers = {
     "Content-Type":  "application/json",
-    "Authorization": `Bearer ${authToken}`,
+    "Authorization": `Bearer ${token}`,
   };
 
   function parseMonthKey(dateStr) {
@@ -39,8 +45,8 @@ export async function scrape(cachedSpendingKeys, cachedPayoutKeys, authToken) {
   let   spendingPages    = 0;
 
   const query = `
-    query GetAllPurchasesByUser($first: Int, $offset: Int, $order: String) {
-      normalizedPurchasesByUser(first: $first, offset: $offset, order: $order) {
+    query GetAllPurchasesByUser($first: Int, $offset: Int) {
+      normalizedPurchasesByUser(first: $first, offset: $offset) {
         nodes {
           total
           createdAt
@@ -52,7 +58,7 @@ export async function scrape(cachedSpendingKeys, cachedPayoutKeys, authToken) {
   `;
 
   while (true) {
-    const variables = { first: PAGE_SIZE, offset, order: "CREATED_AT_DESC" };
+    const variables = { first: PAGE_SIZE, offset };
     let data;
     try {
       const res = await fetch(GRAPHQL_URL, {
@@ -124,11 +130,11 @@ export async function scrape(cachedSpendingKeys, cachedPayoutKeys, authToken) {
         throw new Error(`Failed to fetch payouts (page ${payoutPage}): ${err.message}`);
       }
 
-      const requests = data.payoutRequests;
+      const requests = data?.payoutRequests;
       if (!Array.isArray(requests) || requests.length === 0) break;
 
       payoutPagesFetched++;
-      if (typeof data.totalPages === "number") payoutTotalPages = data.totalPages;
+      if (typeof data?.totalPages === "number") payoutTotalPages = data.totalPages;
 
       const monthsOnPage = {};
       requests.forEach((p) => {
