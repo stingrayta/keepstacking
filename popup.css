@@ -482,3 +482,62 @@ body {
 .breakdown-amount.received { color: #22c55e; }
 .breakdown-amount.positive { color: #22c55e; }
 .breakdown-amount.negative { color: #ef4444; }
+
+/* ── Popup footer (debug + context buttons) ── */
+.popup-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: auto;
+  padding-top: 8px;
+  border-top: 1px solid #1e2433;
+}
+
+.popup-footer .debug-btn,
+.popup-footer .footer-context-btn {
+  align-self: center;
+  flex-shrink: 0;
+}
+
+.popup-footer .debug-btn.active {
+  color: #f59e0b;
+  border-color: #f59e0b;
+}
+
+/* ── Debug panel ── */
+.debug-panel {
+  background: #111318;
+  border: 1px solid #1e2433;
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-size: 12px;
+  color: #94a3b8;
+  margin-top: 8px;
+}
+
+.debug-panel .debug-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 4px;
+  font-family: ui-monospace, monospace;
+}
+
+.debug-panel .debug-row:last-child {
+  margin-bottom: 0;
+}
+
+.debug-panel .debug-label {
+  color: #64748b;
+  flex-shrink: 0;
+}
+
+.debug-panel .debug-value {
+  color: #cbd5e1;
+  text-align: right;
+  word-break: break-word;
+}
+
+.debug-panel .debug-value.error {
+  color: #ef4444;
+}

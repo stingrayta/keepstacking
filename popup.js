@@ -31,11 +31,17 @@ const toggleBreakdown  = document.getElementById("toggle-breakdown");
 const breakdownList    = document.getElementById("breakdown-list");
 const resetBtn         = document.getElementById("reset-btn");
 const togglePropDashboards = document.getElementById("toggle-prop-dashboards");
+const debugBtn         = document.getElementById("debug-btn");
+const debugPanel       = document.getElementById("debug-panel");
+const clearAllCacheBtn = document.getElementById("clear-all-cache-btn");
 
 const MAIN_DASH_VIEW_KEY = "mainDashViewMode";
 const PNL_RANGE_KEY = "pnlRange";
 const MAIN_CONTENT_BREAKDOWN_VIEW_KEY = "mainContentBreakdownView";
 const PROP_DASHBOARDS_COLLAPSED_KEY = "propDashboardsCollapsed";
+const DEBUG_ENABLED_KEY = "debugEnabled";
+const LAST_SCRAPE_ERROR_KEY = "lastScrapeError";
+const LAST_SCRAPE_INFO_KEY = "lastScrapeInfo";
 
 // ── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -398,11 +404,98 @@ function savePropDashboardsCollapsed(collapsed) {
   chrome.storage.local.set({ [PROP_DASHBOARDS_COLLAPSED_KEY]: collapsed });
 }
 
+function loadDebugEnabled() {
+  return new Promise((resolve) => {
+    chrome.storage.local.get([DEBUG_ENABLED_KEY], (data) => {
+      resolve(data[DEBUG_ENABLED_KEY] === true);
+    });
+  });
+}
+
+function saveDebugEnabled(enabled) {
+  chrome.storage.local.set({ [DEBUG_ENABLED_KEY]: enabled });
+}
+
+function loadLastScrapeError() {
+  return new Promise((resolve) => {
+    chrome.storage.local.get([LAST_SCRAPE_ERROR_KEY], (data) => {
+      resolve(data[LAST_SCRAPE_ERROR_KEY] || null);
+    });
+  });
+}
+
+function saveLastScrapeError(msg) {
+  chrome.storage.local.set({ [LAST_SCRAPE_ERROR_KEY]: msg || null });
+}
+
+function saveLastScrapeInfo(info) {
+  chrome.storage.local.set({ [LAST_SCRAPE_INFO_KEY]: info });
+}
+
+function loadLastScrapeInfo() {
+  return new Promise((resolve) => {
+    chrome.storage.local.get([LAST_SCRAPE_INFO_KEY], (data) => {
+      resolve(data[LAST_SCRAPE_INFO_KEY] || null);
+    });
+  });
+}
+
+/**
+ * @param {{ firm?: object, cache?: object, firmsWithCache?: Array, lastError?: string|null, lastScrapeInfo?: object|null }} context
+ */
+function updateDebugPanel(context) {
+  const rows = [];
+  const add = (label, value, isError = false) => {
+    rows.push(`<div class="debug-row"><span class="debug-label">${label}</span><span class="debug-value${isError ? " error" : ""}">${value}</span></div>`);
+  };
+
+  if (context.firm && context.cache) {
+    add("Firm", context.firm.name);
+    add("Payout months", String(Object.keys(context.cache.payoutMonths).length));
+    add("Expense months", String(Object.keys(context.cache.spendingMonths).length));
+  } else if (context.firmsWithCache) {
+    add("Context", "Wrong tab (aggregate)");
+    add("Firms with cache", String(context.firmsWithCache.length));
+    const totalPayoutMonths = context.firmsWithCache.reduce((s, { cache }) => s + Object.keys(cache.payoutMonths).length, 0);
+    const totalExpenseMonths = context.firmsWithCache.reduce((s, { cache }) => s + Object.keys(cache.spendingMonths).length, 0);
+    add("Total payout months", String(totalPayoutMonths));
+    add("Total expense months", String(totalExpenseMonths));
+  }
+
+  const err = context.lastError || null;
+  add("Last error", err ? err : "—", !!err);
+
+  if (context.lastScrapeInfo) {
+    const { spendingPagesFetched, payoutPagesFetched, spendingTotalPages, payoutTotalPages } = context.lastScrapeInfo;
+    add("Pages fetched", `spending ${spendingPagesFetched}/${spendingTotalPages}, payouts ${payoutPagesFetched}/${payoutTotalPages}`);
+  }
+
+  debugPanel.innerHTML = rows.length ? rows.join("") : '<div class="debug-row"><span class="debug-label">—</span><span class="debug-value">No data</span></div>';
+}
+
 // ── Main ─────────────────────────────────────────────────────────────────────
 
 async function init(opts = {}) {
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
   const firm  = FIRMS.find(f => tab?.url?.startsWith(f.origin));
+
+  // Footer: show correct context button (clear-all vs reset)
+  clearAllCacheBtn.classList.toggle("hidden", !!firm);
+  resetBtn.classList.toggle("hidden", !firm);
+
+  // Debug: load state, setup button, show/hide panel
+  const debugEnabled = await loadDebugEnabled();
+  debugPanel.classList.toggle("hidden", !debugEnabled);
+  debugBtn.classList.toggle("active", debugEnabled);
+  if (!debugBtn.dataset.listenerAdded) {
+    debugBtn.dataset.listenerAdded = "1";
+    debugBtn.addEventListener("click", async () => {
+      const enabled = !(await loadDebugEnabled());
+      saveDebugEnabled(enabled);
+      debugPanel.classList.toggle("hidden", !enabled);
+      debugBtn.classList.toggle("active", enabled);
+    });
+  }
 
   if (!firm) {
     wrongTab.classList.remove("hidden");
@@ -609,9 +702,13 @@ async function init(opts = {}) {
       byPropSection.classList.add("hidden");
     }
 
+    // Debug panel
+    const lastError = await loadLastScrapeError();
+    updateDebugPanel({ firmsWithCache, lastError });
+
     // Clear all cache (non-origin view): clear every firm's cache then refresh this view
-    if (!opts.skipClearAllListener) {
-      const clearAllCacheBtn = document.getElementById("clear-all-cache-btn");
+    if (!opts.skipClearAllListener && !clearAllCacheBtn.dataset.listenerAdded) {
+      clearAllCacheBtn.dataset.listenerAdded = "1";
       clearAllCacheBtn.addEventListener("click", async () => {
         if (!confirm("Clear all cached data for all firms? You will need to recalculate from scratch.")) return;
         for (const f of FIRMS) await clearCacheForFirm(f.id);
@@ -627,6 +724,11 @@ async function init(opts = {}) {
   const hasCache = Object.keys(cache.spendingMonths).length > 0 || Object.keys(cache.payoutMonths).length > 0;
   const pnlRange = await loadPnlRange();
   const breakdownView = await loadMainContentBreakdownView();
+
+  // Debug panel
+  const lastError = await loadLastScrapeError();
+  const lastScrapeInfo = await loadLastScrapeInfo();
+  updateDebugPanel({ firm, cache, lastError, lastScrapeInfo });
 
   if (hasCache) {
     renderTotal(cache.spendingMonths, cache.payoutMonths, cache.lastCalculated, { pnlRange, breakdownView });
@@ -729,6 +831,20 @@ async function init(opts = {}) {
       const now = Date.now();
       await saveCache(firm.id, mergedSpending, mergedPayouts, now);
 
+      saveLastScrapeError(null);
+      saveLastScrapeInfo({
+        spendingPagesFetched,
+        payoutPagesFetched,
+        spendingTotalPages,
+        payoutTotalPages,
+      });
+      updateDebugPanel({
+        firm,
+        cache: { spendingMonths: mergedSpending, payoutMonths: mergedPayouts },
+        lastError: null,
+        lastScrapeInfo: { spendingPagesFetched, payoutPagesFetched, spendingTotalPages, payoutTotalPages },
+      });
+
       setStatus(
         `Done — spending: ${spendingPagesFetched}/${spendingTotalPages} page(s), ` +
         `payouts: ${payoutPagesFetched}/${payoutTotalPages} page(s)`
@@ -740,6 +856,13 @@ async function init(opts = {}) {
     } catch (err) {
       const msg = err?.message || String(err);
       setStatus(`Error: ${msg}`);
+      saveLastScrapeError(msg);
+      updateDebugPanel({
+        firm,
+        cache: await loadCache(firm.id),
+        lastError: msg,
+        lastScrapeInfo: await loadLastScrapeInfo(),
+      });
     } finally {
       setCalculating(false);
     }
