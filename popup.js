@@ -6,8 +6,9 @@ import * as bulenox from "./firms/bulenox.js";
 import * as lucid from "./firms/lucid.js";
 import * as mff   from "./firms/mff.js";
 import * as tpt   from "./firms/tpt.js";
+import * as topstep from "./firms/topstep.js";
 
-const FIRMS = [apex, alphaFutures, bulenox, lucid, mff, tpt];
+const FIRMS = [apex, alphaFutures, bulenox, lucid, mff, tpt, topstep];
 
 // ── DOM refs ────────────────────────────────────────────────────────────────
 const wrongTab         = document.getElementById("wrong-tab");
@@ -664,6 +665,19 @@ async function init(opts = {}) {
 
       setStatus("Fetching data…");
 
+      // TopStep: auth token from HttpOnly refresh_token cookie (must be fetched in extension context)
+      let scrapeArgs = [cachedSpendingKeys, cachedPayoutKeys];
+      if (firm.id === "topstep") {
+        const cookie = await chrome.cookies.get({
+          url:  "https://dashboard.topstep.com",
+          name: "refresh_token",
+        });
+        if (!cookie?.value) {
+          throw new Error("TopStep auth token not found. Make sure you are logged in at dashboard.topstep.com.");
+        }
+        scrapeArgs.push(cookie.value);
+      }
+
       // firm.scrape is a self-contained function — Chrome serializes it
       // automatically. Each firm file owns its own scraping logic entirely.
       let results;
@@ -671,7 +685,7 @@ async function init(opts = {}) {
         results = await chrome.scripting.executeScript({
           target: { tabId: tab.id },
           func:   firm.scrape,
-          args:   [cachedSpendingKeys, cachedPayoutKeys],
+          args:   scrapeArgs,
         });
       } catch (scriptErr) {
         const msg = scriptErr?.message || String(scriptErr);
