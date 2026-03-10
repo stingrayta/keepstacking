@@ -45,8 +45,8 @@ export async function scrape(cachedSpendingKeys, cachedPayoutKeys, _authToken) {
   let   spendingPages    = 0;
 
   const query = `
-    query GetAllPurchasesByUser($first: Int, $offset: Int) {
-      normalizedPurchasesByUser(first: $first, offset: $offset) {
+    query GetAllPurchasesByUser($first: Int, $offset: Int, $after: Cursor) {
+      normalizedPurchasesByUser(first: $first, offset: $offset, after: $after) {
         nodes {
           total
           createdAt
@@ -58,7 +58,7 @@ export async function scrape(cachedSpendingKeys, cachedPayoutKeys, _authToken) {
   `;
 
   while (true) {
-    const variables = { first: PAGE_SIZE, offset };
+    const variables = { first: PAGE_SIZE, offset, after: null };
     let data;
     try {
       const res = await fetch(GRAPHQL_URL, {
@@ -87,7 +87,7 @@ export async function scrape(cachedSpendingKeys, cachedPayoutKeys, _authToken) {
     const monthsOnPage = {};
     nodes.forEach((node) => {
       if (node.paymentStatus !== "complete") return;
-      const amount   = parseFloat(node.total) || 0;
+      const amount = Number(node.total) || 0;
       const monthKey = parseMonthKey(node.createdAt);
       if (!monthKey || amount === 0) return;
       monthsOnPage[monthKey] = (monthsOnPage[monthKey] || 0) + amount;
@@ -139,7 +139,7 @@ export async function scrape(cachedSpendingKeys, cachedPayoutKeys, _authToken) {
       const monthsOnPage = {};
       requests.forEach((p) => {
         if (p.status !== "Finalized") return;
-        const amount   = (parseFloat(p.amount) || 0) / 100; // minor units to dollars
+        const amount   = parseFloat(p.amount) || 0;
         const monthKey = parseMonthKey(p.createdAt);
         if (!monthKey || amount === 0) return;
         monthsOnPage[monthKey] = (monthsOnPage[monthKey] || 0) + amount;

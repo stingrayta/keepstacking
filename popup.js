@@ -260,7 +260,7 @@ function renderTotal(spendingMonths, payoutMonths, lastTs, options = {}) {
   const net           = totalReceived - totalSpent;
   const hasData       = totalSpent > 0 || totalReceived > 0;
 
-  spentDisplay.textContent    = totalSpent    > 0 ? formatUSD(totalSpent)    : "—";
+  spentDisplay.textContent    = formatUSD(totalSpent);
   receivedDisplay.textContent  = formatUSD(totalReceived);
   netDisplay.textContent      = hasData ? formatUSD(net) : "—";
   netDisplay.className        = "net-amount" + (hasData ? (net >= 0 ? " positive" : " negative") : "");
