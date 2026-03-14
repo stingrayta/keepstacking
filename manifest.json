@@ -12,7 +12,10 @@
     "https://api.myfundedfutures.com/*",
     "https://app.alpha-futures.com/*",
     "https://backend.alpha-futures.com/*",
-    "https://takeprofittrader.com/*"
+    "https://takeprofittrader.com/*",
+    "https://dashboard.topstep.com/*",
+    "https://crystal.topstep.com/*",
+    "https://api.topstep.com/*"
   ],
   "action": {
     "default_popup": "popup.html",

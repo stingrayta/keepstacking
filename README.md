@@ -9,8 +9,12 @@ A Chrome extension for prop traders to track spending, payouts, and net profit a
 | Firm | Dashboard |
 |------|-----------|
 | Apex Trader Funding | `dashboard.apextraderfunding.com` |
+| Alpha Futures | `app.alpha-futures.com` |
+| Bulenox | `bulenox.com/member` |
 | Lucid Trading | `dash.lucidtrading.com` |
 | MyFundedFutures | `myfundedfutures.com` |
+| Take Profit Trader | `takeprofittrader.com` |
+| TopStep | `dashboard.topstep.com` |
 
 ---
 
@@ -39,11 +43,20 @@ A Chrome extension for prop traders to track spending, payouts, and net profit a
 2. Click the **KeepStacking** extension icon
 3. Click **Calculate**
 4. The extension fetches your full history and displays:
-   - **Spent** — total purchases/fees
-   - **Received** — total payouts
-   - **Net Profit** — received minus spent
-   - **By Month** — expandable breakdown with Spent / Received / Net columns
+   - **Spent** — total purchases/fees (metric card)
+   - **Received** — total payouts (metric card)
+   - **Net Profit** — received minus spent (highlighted card)
+   - **Breakdown** — expandable view by month or by year
 5. Click **Recalculate** anytime — only the current month is re-fetched
+
+### When Not on a Dashboard
+
+Open the extension from any tab to see:
+- **Prop Dashboards** — quick links to all supported firms (show/hide toggle)
+- **Aggregated totals** — Spent, Received, Net across all your cached firms
+- **By prop / By month / By year** — switchable breakdown views with expandable rows
+- **PNL range** — filter to All data or This year only
+- **Clear all** — trash icon to clear all cached data
 
 ---
 

@@ -56,14 +56,6 @@
         </div>
         <div id="by-prop-list" class="breakdown-list hidden"></div>
       </div>
-      <button id="clear-all-cache-btn" class="btn btn-ghost" title="Clear all cached data">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <polyline points="3 6 5 6 21 6"/>
-          <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
-          <path d="M10 11v6M14 11v6"/>
-          <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
-        </svg>
-      </button>
     </div>
 
     <!-- Main content -->
@@ -123,8 +115,32 @@
         <div id="breakdown-list" class="breakdown-list hidden"></div>
       </div>
 
-      <!-- Reset -->
-      <button id="reset-btn" class="btn btn-ghost" title="Clear cached data">
+    </div>
+
+    <!-- Footer: debug (left) + context action (right) -->
+    <div class="popup-footer">
+      <button id="debug-btn" class="btn btn-ghost debug-btn" title="Toggle debug info">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="m8 2 1.88 1.88"/>
+          <path d="M14.12 3.88 16 2"/>
+          <path d="M9 7.13v-1a3.003 3.003 0 0 1 6 0v1"/>
+          <path d="M12 8c-3.866 0-7 2.239-7 5v4h14v-4c0-2.761-3.134-5-7-5z"/>
+          <path d="M5 17v2"/>
+          <path d="M19 17v2"/>
+          <path d="M12 17v4"/>
+          <path d="M3 13h4"/>
+          <path d="M17 13h4"/>
+        </svg>
+      </button>
+      <button id="clear-all-cache-btn" class="btn btn-ghost footer-context-btn hidden" title="Clear all cached data">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="3 6 5 6 21 6"/>
+          <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
+          <path d="M10 11v6M14 11v6"/>
+          <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
+        </svg>
+      </button>
+      <button id="reset-btn" class="btn btn-ghost footer-context-btn hidden" title="Clear cached data">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <polyline points="3 6 5 6 21 6"/>
           <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
@@ -133,6 +149,8 @@
         </svg>
       </button>
     </div>
+
+    <div id="debug-panel" class="debug-panel hidden"></div>
   </div>
 
   <script type="module" src="popup.js"></script>
